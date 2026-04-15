@@ -1,46 +1,84 @@
+# 프로젝트 개요
 
-# AI UI 에이전트 엔터프라이즈 워크벤치
- - 퍼블리싱
+GitHub 레포지토리 URL을 입력하면 백엔드가 소스 코드를 분석하고, **컴포넌트 계층·사용자 플로우·Mermaid 다이어그램·모바일 와이어프레임(PREVIEW)** 등을 한 화면에서 확인할 수 있는 Next.js 기반 워크벤치 UI입니다.
 
-## 퍼블리싱 환경
-| 프로그램명 | 버전 |
-|---|---|
-| react | 19.2.4 | 
-| tailwind | 4.2.0 |
-| typescript | 5.7.3 |
+# 기술 스택
 
-## 작업 진행 리스트
-- [x] 디자인: 다크 테마 완료(사용안함) [피그마](https://figmashort.link/MDWQYt)
-- [x] 초안 UI기획 문서 작성
-- [x] 디자인: 라이트 테마 완료 [https://figmashort.link/8zJJdn](https://figmashort.link/8zJJdn)
-- [x] 퍼블리싱 v0 초안 코드 작성
-- [ ] 퍼블리싱 디테일 정리 (~3/16)
+| 구분 | 기술 |
+|------|------|
+| 프레임워크 | Next.js 16 (App Router), React 19 |
+| 언어 | TypeScript 5.7 |
+| 스타일 | Tailwind CSS 4 |
+| UI | Radix UI 기반(shadcn 패턴), lucide-react |
+| HTTP | axios |
+| 기타 | Mermaid(다이어그램), react-diff-viewer-continued(DIFF), react-markdown |
 
-## 디렉토리 상세
-- 라이트 테마로 퍼블 구성 되었습니다.
-- / : 기본 시나리오 있는 페이지로 세팅됨
+패키지 매니저: **yarn** (package.json의 `packageManager` 기준)
 
----
-app
-  - /design-system : 퍼블리싱 디자인 시스템
-  - /null : 최초진입, 시나리오 없을때
-  - /modify : 수정했을때 효과
-  - /modal : 팝업 모음
-  - /toast : 토스트 모음
----
+# 주요 기능 (UI 중심)
 
+- Git URL 입력 후 **분석** → 진행 단계(SSE) 표시
+- **PREVIEW**: LLM 생성 HTML을 iframe으로 표시(모바일 프레임), 트리 선택 시 하이라이트 연동
+- **FLOW / DIAGRAM**: 사용자 플로우·Mermaid 다이어그램 표시
+- **CODE / DIFF**: 영역 코드 보기·기획 수정 요청 후 diff 확인
+- 좌측 패널: 컴포넌트/영역 트리, 분석 결과 텍스트, 체크박스·기획 수정
+- 참고 라우트: `/design-system`, `/modal`, `/toast`, `/modify`, `/null` 등(데모·컴포넌트 목록)
 
-## 로컬서버 실행
-- front서버: yarn실행으로 강제 설정됨.
-- back서버: python기동
+# 폴더 구조
+
+```
+frontend/
+├── app/                 # App Router 페이지
+│   ├── page.tsx         # 메인 워크벤치
+│   ├── layout.tsx
+│   └── …                # design-system, modal, toast 등
+├── components/          # 공용 컴포넌트·UI(shadcn)
+├── lib/                 # 유틸(api 클라이언트 등)
+├── hooks/
+├── public/
+├── package.json
+└── README.md
+```
+
+# 실행 방법
+
+## 설치
 
 ```bash
+cd frontend
 yarn install
+```
+
+## 개발 서버
+
+```bash
 yarn dev
 ```
+
+기본적으로 Next.js는 `http://localhost:3000`에서 동작합니다. 백엔드 CORS 설정에 `localhost:3001`이 포함된 경우가 있으므로, 포트를 맞출 때는 백엔드 `main.py`의 `allow_origins`와 함께 조정하세요.
+
+## 빌드·프로덕션
+
 ```bash
-pip install -r requirements.txt
-python -m uvicorn main:app --reload --port 8001
+yarn build
+yarn start
 ```
-render에 등록할 때: python -m uvicorn main:app --host 0.0.0.0 --port 8000
+
+# 환경 변수
+
+프로젝트 루트에 `.env` 또는 `.env.local`을 둘 수 있습니다. 예시:
+
+```env
+# 백엔드 API 베이스 URL (배포 시 설정 권장)
+# NEXT_PUBLIC_API_URL=http://localhost:8001
 ```
+
+현재 `lib/api.ts`는 개발 편의상 `http://localhost:8001`을 기본으로 두는 형태일 수 있습니다. 배포 시에는 `NEXT_PUBLIC_API_URL`을 실제 API 주소로 맞추고, `api.ts`에서 해당 변수를 읽도록 구성하는 것이 일반적입니다.
+
+# API 연동 방식
+
+- **클라이언트**: `axios` 인스턴스(`lib/api.ts`)로 `baseURL`에 백엔드 주소 설정
+- **분석**: `POST /api/analyze-repo` — **Server-Sent Events(SSE)** 스트림으로 단계별 메시지·최종 JSON 수신
+- **코드 수정**: `POST /api/modify-code` — JSON 요청/응답
+
+CORS는 백엔드에서 허용 origin 목록으로 제어됩니다. 로컬에서 포트가 다르면 백엔드 CORS 설정에 프론트 origin을 추가해야 합니다.
